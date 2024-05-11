@@ -1,0 +1,1 @@
+# this program recognizes activities
