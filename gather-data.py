@@ -14,6 +14,8 @@ COLUMNS = ["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]
 MAX_DATA_POINTS = 10000 #should be around 10 seconds
 NAME = "emma"
 
+measuring_started = False
+
 #--- let user choose activity
 for i in range(0, len(ACTIVITIES)):
     print("Activity id ", i, " - ", ACTIVITIES[i])
@@ -54,7 +56,15 @@ def get_data() -> list:
     return [time.time(), acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z]
 
 def start_activity(button):
+    global measuring_started
     if int(button) == 1: #button pressed
+        measuring_started = True
+        
+sensor.register_callback('button_1', start_activity)
+
+# had to do it like this, because sensor data were freezed in the callback
+while True:
+    if(measuring_started):
         print("Started " + activity)
         df = pd.DataFrame(columns=COLUMNS)
         for i in range(0, MAX_DATA_POINTS):
@@ -65,5 +75,3 @@ def start_activity(button):
         safe_to_csv(df)
         print("Data saved.")
         sys.exit()
-
-sensor.register_callback('button_1', start_activity)
