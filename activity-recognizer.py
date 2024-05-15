@@ -11,15 +11,19 @@ from sklearn import svm
 import os
 from typing import Dict, List
 from scipy import signal
+from sklearn.model_selection import train_test_split
 
 FOLDER_PATH = "data"
 
 ACTIVITIES = ["running", "rowing", "lifting", "jumpingjacks"]
 COLUMNS = ["activity", "acc_x_fr", "acc_y_fr", "acc_z_fr", "gyro_x_fr", "gyro_y_fr", "gyro_z_fr"]
+TRAIN_COLUMNS = ["acc_x_fr", "acc_y_fr", "acc_z_fr", "gyro_x_fr", "gyro_y_fr", "gyro_z_fr"]
 
 KERNEL_SIZE = 20
 KERNEL_SIGMA = 5
 SAMPLING_RATE = 100
+
+TEST_SIZE = 0.2
 
 #--- methods from assignment 2
 
@@ -54,12 +58,9 @@ def get_max_frequency(data) -> float:
 
     #get max frequency
     max_frequency = positive_frequencies[np.argmax(spectrum)]
-
-   # print(np.argmax(spectrum))
-    #max_frequency = frequencies[np.argmax(spectrum)]
     return max_frequency
 
-def get_frequency(data) -> int:
+def get_frequency(data) -> float:
     # Convert audio data to numpy array
     data = np.array(data)
 
@@ -78,8 +79,8 @@ def get_frequency(data) -> int:
 
 #--- other helper methods
 
-#from maschine_learning_tour.ipynb
-def normalize_data(df) -> pd.DataFrame:
+#from maschine_learning_tour.ipynb - Centers all values around their mean value which is then 0.
+def center_mean(df) -> pd.DataFrame:
     scaled_samples = scale(df[["acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]])
     df_mean = df.copy()
     df_mean[["acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]] = scaled_samples
@@ -88,15 +89,14 @@ def normalize_data(df) -> pd.DataFrame:
 class ActivityRecognizer:
 
     def __init__(self) -> None:
+        self.data = None
         self.preprocess_data()
         self.train_classifier()
-        self.test_data()
 
     def preprocess_data(self) -> None:
         data = self.read_data()
-        #self.normalize_data(data)
-        data = self.apply_fft(data)
-        print(data)
+        self.data = self.apply_fft(data)
+        print(self.data)
 
     #used GPT for this method
     def read_data(self) -> Dict[str, List[pd.DataFrame]]:
@@ -108,14 +108,15 @@ class ActivityRecognizer:
         # iterate over all files in folder
         for filename in os.listdir(FOLDER_PATH):
             file_path = os.path.join(FOLDER_PATH, filename)
+            # All dataframes are centered around mean before storing them. Otherwise frequency would not be detected correctly afterwards.
             if 'running' in filename:
-                running_dfs.append(normalize_data(pd.read_csv(file_path)))
+                running_dfs.append(center_mean(pd.read_csv(file_path)))
             elif 'rowing' in filename:
-                rowing_dfs.append(normalize_data(pd.read_csv(file_path)))
+                rowing_dfs.append(center_mean(pd.read_csv(file_path)))
             elif 'lifting' in filename:
-                lifting_dfs.append(normalize_data(pd.read_csv(file_path)))
+                lifting_dfs.append(center_mean(pd.read_csv(file_path)))
             elif 'jumpingjacks' in filename:
-                jumpingjacks_dfs.append(normalize_data(pd.read_csv(file_path)))
+                jumpingjacks_dfs.append(center_mean(pd.read_csv(file_path)))
         
         return {
             "running": running_dfs,
@@ -125,7 +126,7 @@ class ActivityRecognizer:
         }
 
     #calculate the frequency for every measure of every dataframe and safe it in one dataframe
-    def apply_fft(self, data) -> None:
+    def apply_fft(self, data) -> pd.DataFrame:
         df_all = pd.DataFrame(columns=COLUMNS)
         for activity in ACTIVITIES:
             for df in data[activity]:
@@ -139,12 +140,30 @@ class ActivityRecognizer:
         return df_all
 
     def train_classifier(self) -> None:
-        pass
+        train, test = train_test_split(self.data, test_size=TEST_SIZE)
+        self.classifier = svm.SVC(kernel='poly')
+        #classifier = svm.SVC(kernel='rbf') # non-linear classifier
 
-    def test_data(self) -> None:
-        pass
+        #https://stackoverflow.com/a/69378867 - get rid of warnings
+        self.classifier.fit(train[TRAIN_COLUMNS].values, train['activity'].values) 
 
-    def get_activity(self, data) -> str:
+        self.test_data(test)
+
+    def get_activity(self, row) -> str:
+        activity = self.classifier.predict([row[TRAIN_COLUMNS]])
+        return activity
+
+    #tests test dataframe and prints accuracy
+    def test_data(self, test) -> None:
+        classification_results = []
+        for index, row in test.iterrows():
+            activity_prediction = self.get_activity(row)
+            classification_results.append(activity_prediction == row["activity"])
+
+        counts = classification_results.count(True)
+        print("CLASSIFIER CREATED. ACCURACY: " + str(counts/len(classification_results)))
+
+    def get_current_activity(self, data) -> str:
         return ""
     
 activity = ActivityRecognizer()
