@@ -141,29 +141,30 @@ class ActivityRecognizer:
 
     def train_classifier(self) -> None:
         train, test = train_test_split(self.data, test_size=TEST_SIZE)
-        self.classifier = svm.SVC(kernel='poly')
-        #classifier = svm.SVC(kernel='rbf') # non-linear classifier
+        self.classifier = svm.SVC(kernel='rbf')
 
         #https://stackoverflow.com/a/69378867 - get rid of warnings
         self.classifier.fit(train[TRAIN_COLUMNS].values, train['activity'].values) 
 
         self.test_data(test)
 
-    def get_activity(self, row) -> str:
-        activity = self.classifier.predict([row[TRAIN_COLUMNS]])
-        return activity
-
     #tests test dataframe and prints accuracy
     def test_data(self, test) -> None:
         classification_results = []
         for index, row in test.iterrows():
-            activity_prediction = self.get_activity(row)
+            #predict activities through classifier
+            activity_prediction = self.classifier.predict([row[TRAIN_COLUMNS]])
             classification_results.append(activity_prediction == row["activity"])
 
         counts = classification_results.count(True)
         print("CLASSIFIER CREATED. ACCURACY: " + str(counts/len(classification_results)))
 
-    def get_current_activity(self, data) -> str:
-        return ""
-    
-activity = ActivityRecognizer()
+    def get_current_activity(self, df) -> str:
+        df = center_mean(df)
+        acc_x_fr = get_frequency(df["acc_x"])
+        acc_y_fr = get_frequency(df["acc_y"])
+        acc_z_fr = get_frequency(df["acc_z"])
+        gyro_x_fr = get_frequency(df["gyro_x"])
+        gyro_y_fr = get_frequency(df["gyro_y"])
+        gyro_z_fr = get_frequency(df["gyro_z"])
+        return self.classifier.predict([[acc_x_fr, acc_y_fr, acc_z_fr, gyro_x_fr, gyro_y_fr, gyro_z_fr]])

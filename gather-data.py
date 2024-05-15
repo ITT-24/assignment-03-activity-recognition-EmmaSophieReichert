@@ -12,6 +12,7 @@ sensor = SensorUDP(PORT)
 ACTIVITIES = ["running", "rowing", "lifting", "jumpingjacks"]
 COLUMNS = ["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]
 MAX_DATA_POINTS = 10000 #should be around 10 seconds
+SLEEP_TIME = 0.001
 NAME = "emma"
 
 measuring_started = False
@@ -71,7 +72,7 @@ while True:
             data_row = get_data()
             if(data_row):
                 df.loc[len(df)] = data_row
-            time.sleep(0.001)
+            time.sleep(SLEEP_TIME)
         safe_to_csv(df)
         print("Data saved.")
         sys.exit()
