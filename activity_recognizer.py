@@ -96,7 +96,6 @@ class ActivityRecognizer:
     def preprocess_data(self) -> None:
         data = self.read_data()
         self.data = self.apply_fft(data)
-        print(self.data)
 
     #used GPT for this method
     def read_data(self) -> Dict[str, List[pd.DataFrame]]:
