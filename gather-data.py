@@ -13,7 +13,7 @@ ACTIVITIES = ["running", "rowing", "lifting", "jumpingjacks"]
 COLUMNS = ["timestamp", "acc_x", "acc_y", "acc_z", "gyro_x", "gyro_y", "gyro_z"]
 MAX_DATA_POINTS = 10000 #should be around 10 seconds
 SLEEP_TIME = 0.001
-NAME = "emma"
+NAME = "andi"
 
 measuring_started = False
 
